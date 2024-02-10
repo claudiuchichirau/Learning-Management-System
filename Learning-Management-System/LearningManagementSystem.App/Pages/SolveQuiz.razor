@@ -1,0 +1,386 @@
+﻿@page "/solve-quiz/{chapterId}"
+@using LearningManagementSystem.App.Auth
+@using LearningManagementSystem.App.Contracts
+@using LearningManagementSystem.App.Services
+@using LearningManagementSystem.App.SharedDataServices
+@using LearningManagementSystem.App.ViewModels
+@inject NavigationManager NavigationManager
+@inject CustomStateProvider AuthStateProvider
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .form-quiz {
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        width: 50%;
+        margin: 0 auto;
+    }
+
+    .quiz-title {
+        text-align: center;
+        color: #333;
+        font-size: 34px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+
+    .question-block {
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .question-text {
+        color: #333;
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .error-message {
+        color: red;
+        margin-top: 10px;
+    }
+
+    .choices-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .choice-item {
+        margin-bottom: 10px;
+    }
+
+        .choice-item input[type="radio"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .choice-item label {
+            font-size: 18px;
+            color: #555;
+        }
+
+    .custom-save-btn {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none;
+        border-radius: 5px;
+        margin: 0 auto;
+        padding: 10px 20px;
+        font-size: 18px;
+    }
+
+    .validation-summary {
+        margin-top: 20px;
+    }
+
+    .no-questions-message, .loading-message {
+        text-align: center;
+        color: #888;
+        font-size: 18px;
+    }
+
+    .custom-hr {
+        height: 25px;
+        background: #ff9404;
+        width: 40%;
+        margin: auto;
+        margin-bottom: 10px;
+    }
+
+    /* Styles for mobile devices */
+    @@media (max-width: 600px) {
+
+    }
+
+    /* Styles for tablet devices */
+    @@media (min-width: 601px) and (max-width: 1024px) {
+
+    }
+
+    .container {
+        width: 80%;
+        margin: auto;
+    }
+
+    h4, h5 {
+        color: #333;
+    }
+
+    p {
+        color: #666;
+    }
+
+    iframe, embed {
+        width: 100%;
+        height: 400px;
+    }
+
+    /* Stiluri pentru întrebări */
+    .question {
+        margin-top: 20px;
+    }
+
+        .question strong {
+            color: #333;
+        }
+
+        .question ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+            .question ul li {
+                background-color: #f9f9f9;
+                margin-bottom: 10px;
+                padding: 10px;
+                border-radius: 5px;
+            }
+
+                .question ul li strong {
+                    color: green;
+                }
+
+                .question ul li em {
+                    color: red;
+                }
+
+    /* Stiluri responsabile */
+    @@media (max-width: 600px) {
+        .container {
+            width: 95%;
+        }
+
+        iframe, embed {
+            height: 300px;
+        }
+    }
+
+
+
+</style>
+
+
+@if (ChapterDto != null && Enrollment != null)
+{
+    <h5 class="quiz-title">Quizz</h5>
+
+    @if (ChapterDto.Questions != null && ChapterDto.Questions.Any())
+    {
+        <EditForm Model="@SolveQuizViewModel" OnValidSubmit="@SubmitAnswers" class="form-quiz">
+            <DataAnnotationsValidator />
+            @foreach (var question in ChapterDto.Questions)
+            {
+                <div class="question-block">
+                    <strong class="question-text">@question.Text</strong>
+                    @if (@Messages.ContainsKey(question.QuestionId))
+                    {
+                        <div class="error-message" style="color: red; margin-top: 10px;">@Messages[question.QuestionId]</div>
+                    }
+                    <ul class="choices-list">
+                        @foreach (var choice in question.Choices)
+                        {
+                            <li class="choice-item">
+                                <input type="radio" name="@($"question_{question.QuestionId}")" id="@($"choice_{choice.ChoiceId}")" value="@choice.Content" @onchange="() => SelectChoice(question.QuestionId, choice.ChoiceId, choice.IsCorrect)" />
+                                <label for="@($"choice_{choice.ChoiceId}")">@choice.Content</label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <hr class="custom-hr">
+            }
+
+            <div class="form-group text-center validation-summary">
+                <ValidationSummary />
+            </div>
+
+            @if (!Submitted)
+            {
+                <div class="form-group submit-button-container">
+                    <div class="d-flex flex-column">
+                        <button type="submit" class="btn btn-lg btn-primary mt-3 custom-save-btn">Submit</button>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(@Message))
+            {
+                <div class="general-error-message" style="color: red; margin-top: 10px;">Something went wrong, verify and try again</div>
+            }
+        </EditForm>
+    }
+    else
+    {
+        <p class="no-questions-message">Nu există întrebări pentru acest capitol.</p>
+    }
+}
+else
+{
+    <p class="loading-message">Loading...</p>
+}
+
+
+@code {
+    [Inject]
+    public IChapterDataService ChapterDataService { get; set; }
+
+    [Inject]
+    public IEnrollmentDataService EnrollmentDataService { get; set; }
+
+    [Inject]
+    public IQuizDataService QuizDataService { get; set; }
+
+    [Parameter]
+    public string ChapterId { get; set; }
+
+    public ChapterViewModel Chapter { get; set; }
+
+    public ChapterDto ChapterDto { get; set; }
+
+    public bool Submitted { get; set; } = false;
+
+    public SolveQuizViewModel SolveQuizViewModel { get; set; } = new();
+
+    public bool HasAdminRole = false;
+
+    public Guid UserId = Guid.Empty;
+
+    public List<EnrolledCourseDto> EnrolledCourses { get; set; } = [];
+
+    public EnrolledCourseDto Enrollment { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+        var claims = user.Claims.ToList();
+
+        var userIdClaim = claims.FirstOrDefault(claim => claim.Type == "nameid");
+
+        HasAdminRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Admin");
+
+        if (userIdClaim != null) UserId = Guid.Parse(userIdClaim.Value);
+
+        Guid Id = Guid.Parse(ChapterId);
+
+        var c = await ChapterDataService.GetChapterDetailsAsync(Id);
+
+        if (c.IsSuccess)
+        {
+            ChapterDto = c.Data;
+        }
+        else
+        {
+            Console.WriteLine("Nothing to see here.");
+        }
+
+        var result = await ChapterDataService.GetChapterByIdAsync(Id);
+
+        if (result.IsSuccess)
+        {
+            Chapter = result.Data;
+            SolveQuizViewModel.ChapterId = Chapter.ChapterId;
+
+            EnrolledCourses = (await EnrollmentDataService.GetEnrolledCoursesAsync(UserId)).ToList();
+
+            Enrollment = EnrolledCourses.FirstOrDefault(ec => ec.CourseId == Chapter.CourseId);
+
+            if (Enrollment != null)
+            {
+                SolveQuizViewModel.EnrollmentId = Enrollment.EnrollmentId;
+
+                foreach (var question in ChapterDto.Questions)
+                {
+                    SolveQuizViewModel.QuestionResults.Add(new SolveQuizQuestionResultViewModel { QuestionId = question.QuestionId });
+                }
+            }
+
+        }
+        else
+        {
+            Console.WriteLine("Nothing to see here.");
+        }
+    }
+
+    public string Message { get; set; } = "";
+
+    public Dictionary<Guid, string> Messages { get; set; } = new();
+
+
+    private Dictionary<Guid, (Guid, bool)> selectedChoices = new Dictionary<Guid, (Guid, bool)>();
+
+    private void SelectChoice(Guid questionId, Guid choiceId, bool isCorrect)
+    {
+        if (selectedChoices.ContainsKey(questionId))
+        {
+            selectedChoices[questionId] = (choiceId, isCorrect);
+        }
+        else
+        {
+            selectedChoices.Add(questionId, (choiceId, isCorrect));
+        }
+    }
+
+    private async void SubmitAnswers()
+    {
+        foreach (var question in SolveQuizViewModel.QuestionResults)
+        {
+            if (selectedChoices.ContainsKey(question.QuestionId))
+            {
+                question.ChoiceId = selectedChoices[question.QuestionId].Item1;
+                question.IsCorrect = selectedChoices[question.QuestionId].Item2;
+            }
+            else return;
+        }
+
+        var result = await QuizDataService.SolveQuizAsync(SolveQuizViewModel);
+        if (result.IsSuccess)
+        {
+            foreach (var question in ChapterDto.Questions)
+            {
+                if (selectedChoices.ContainsKey(question.QuestionId))
+                {
+                    if (selectedChoices[question.QuestionId].Item2)
+                    {
+                        Messages.Add(question.QuestionId, "Good job!");
+                    }
+                    else
+                    {
+                        Messages.Add(question.QuestionId, "Wrong answer!");
+                    }
+                }
+            }
+
+            Submitted = true;
+        }
+        else
+        {
+            Message = result.Message;
+            if (!string.IsNullOrWhiteSpace(result.ValidationErrors))
+            {
+                Message += result.ValidationErrors;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void NavigateToCreateQuiz()
+    {
+        NavigationManager.NavigateTo($"/createquiz/{Chapter.ChapterId}");
+    }
+
+    private void NavigateToUpdateChapter()
+    {
+        NavigationManager.NavigateTo($"/updatechapter/{Chapter.ChapterId}");
+    }
+}

@@ -1,0 +1,166 @@
+﻿@using LearningManagementSystem.App.Auth
+@using LearningManagementSystem.App.Contracts
+@using LearningManagementSystem.App.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CustomStateProvider AuthStateProvider
+@inject RoleAuthorizationService AuthorizationService
+@inject IJSRuntime JSRuntime
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+<style>
+	.navbar-nav {
+		display: flex;
+		align-items: center;
+	}
+	.menu-btns {
+        display: flex;
+        margin-left: auto;
+	}
+
+	.nav-link {
+		justify-content: center;
+	}
+
+	.nav-link:hover {
+			font-weight: bold;
+		}
+
+	.account-buttons {
+        display: flex;
+        margin-left: auto;
+	}
+
+	.btn-login {
+		background-color: #fc940c;
+		color: white;
+		border-radius: 10px;
+		justify-content: center;
+	}
+
+	.btn-logout {
+		/*display: flex;
+		margin-left: auto; */
+		background-color: #fc940c;
+		color: white;
+		border-radius: 10px;
+		justify-content: center;
+	}
+
+	.btn-login:hover {
+		background-color: #fcba5c;
+	}
+
+	.btn-sign-up:hover {
+		font-weight: bold;
+	}
+
+	@@media (min-width: 640px) and (max-width: 991px) {
+		.navbar-toggler {
+			display: block !important;
+		}
+	}
+
+
+/* 	@@media (max-width: 992px) {
+		.navbar-nav {
+			flex: 0 0 50%;
+			max-width: 100%;
+			text-align: center;
+		}
+
+		.account-buttons {
+			flex-direction: column;
+		}
+	} */
+</style>
+
+<div class="navbar navbar-expand-lg navbar-light bg-light">
+	<button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+	<a class="navbar-brand ml-auto" href="#">
+		<img src="/Images/Logo.png" alt="Company Logo" class="navbar-logo" />
+	</a>
+	<div class="@NavMenuCssClass navbar-collapse">
+		<CascadingAuthenticationState>
+			<Microsoft.AspNetCore.Components.Authorization.AuthorizeView>
+				<Authorized>
+                    <div class="navbar-nav">
+                        <NavLink class="nav-item nav-link" href="#" Match="NavLinkMatch.All" @onclick="ToggleNavMenu">Home</NavLink>
+                        <NavLink class="nav-item nav-link" href="UserProfile" @onclick="ToggleNavMenu">Profile</NavLink>
+                        <NavLink class="nav-item nav-link" href="categoryoverview" @onclick="ToggleNavMenu">Categories</NavLink>
+                        @if (HasAdminRole)
+                        {
+                            <NavLink class="nav-item nav-link" href="addcategory" @onclick="ToggleNavMenu">Add Category</NavLink>
+                            <NavLink class="nav-item nav-link" href="courseoverview" @onclick="ToggleNavMenu">Courses</NavLink>
+                            <NavLink class="nav-item nav-link" href="chapteroverview" @onclick="ToggleNavMenu">Chapters</NavLink>
+                            <NavLink class="nav-item nav-link" href="addchapter" @onclick="ToggleNavMenu">Add Chapter</NavLink>
+                        }
+                        @if (HasAdminRole || HasProfessorRole)
+                        {
+                            <NavLink class="nav-item nav-link" href="addcourse" @onclick="ToggleNavMenu">Add Course</NavLink>
+                        }
+                        <NavLink class="nav-item nav-link" href="aboutus" @onclick="ToggleNavMenu">About Us</NavLink>
+                    </div>
+					
+                    <div class="account-buttons">
+                        <NavLink class="btn btn-logout" href="logout" @onclick="Logout">Logout</NavLink>
+                    </div>
+				</Authorized>
+				<NotAuthorized>
+				<div class="account-buttons">
+					<NavLink class="btn btn-sign-up" href="register" @onclick="ToggleNavMenu">Sign Up</NavLink>
+					<NavLink class="btn btn-login" href="login" @onclick="ToggleNavMenu">Login</NavLink>
+				</div>
+				</NotAuthorized>
+			</Microsoft.AspNetCore.Components.Authorization.AuthorizeView>
+		</CascadingAuthenticationState>
+	</div>
+</div>
+
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+
+@code {
+	[Inject]
+	public NavigationManager NavigationManager { get; set; }
+	[Inject]
+	public IAuthenticationService AuthenticationService { get; set; }
+
+	private bool collapseNavMenu = true;
+
+	private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+	private AuthenticationState authState;
+
+	public bool HasAdminRole = false;
+	public bool HasProfessorRole = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		authState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+		var user = authState.User;
+		var claims = user.Claims.ToList();
+		
+		//var userIdClaim = claims.FirstOrDefault(claim => claim.Type == "nameid");
+
+		HasAdminRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Admin");
+		HasProfessorRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Professor");
+	}
+
+	private bool IsUserAuthenticated => authState.User.Identity.IsAuthenticated;
+
+	private void ToggleNavMenu()
+	{
+		collapseNavMenu = !collapseNavMenu;
+	}
+
+	private async Task Logout()
+    {
+        await AuthenticationService.Logout();
+		NavigationManager.NavigateTo("/login");
+        //await JSRuntime.InvokeVoidAsync("location.reload");
+    }
+}

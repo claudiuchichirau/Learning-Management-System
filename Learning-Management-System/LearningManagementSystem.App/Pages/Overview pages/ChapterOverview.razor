@@ -1,0 +1,151 @@
+﻿@page "/chapteroverview"
+@using LearningManagementSystem.App.Auth
+@using LearningManagementSystem.App.Contracts
+@using LearningManagementSystem.App.ViewModels
+@inject CustomStateProvider AuthStateProvider
+
+<style>
+    h3 {
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .chapter-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+    }
+
+    .chapter-card {
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 20px;
+        width: calc(100% / 4 - 40px); /* 4 carduri pe rând pe desktop */
+        box-sizing: border-box;
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .chapter-header {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .chapter-title {
+        font-size: 20px;
+        margin: 0 0 10px 0;
+        font-weight: bold;
+    }
+
+    .course-title,
+    .chapter-link {
+        margin: 0;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .view-chapter-button {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none; /* Adaugă această regulă pentru a elimina conturul albastru la focus */
+        text-align: right;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+
+        .view-chapter-button:hover {
+            background-color: #fcba5c;
+            color: black;
+            border: none;
+            outline: none;
+        }
+
+    @@media (max-width: 1024px) {
+        /* 3 carduri pe rând pe tabletă */
+        .chapter-card {
+            width: calc(100% / 3 - 40px);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        /* 2 carduri pe rând pe mobile */
+        .chapter-card {
+            width: calc(100% / 2 - 40px);
+        }
+    }
+</style>
+
+
+<h3>All Chapters</h3>
+
+<br />
+<div class="chapter-container">
+    @if (Chapters == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        @foreach (var chapter in Chapters)
+        {
+            <div class="chapter-card">
+                <div class="chapter-header">
+                    <h2 class="chapter-title">@chapter.Title</h2>
+                    <p class="course-title">@chapter.Course.Title</p>
+                </div>
+                <p class="chapter-link">@chapter.Link</p>
+                <div class="button-container">
+                    <button class="view-chapter-button" @onclick="() => NavigateToChapterOpen(chapter.ChapterId)">View Chapter</button>
+                    @if (HasAdminRole || UserId == chapter.Course?.UserId)
+                    {
+                        <button class="view-chapter-button" @onclick="() => NavigateToUpdateChapter(chapter.ChapterId)">Update</button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+
+@code {
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+
+    [Inject]
+    public IChapterDataService ChapterDataService { get; set; }
+
+    public List<ChapterDto> Chapters { get; set; }
+
+    public bool HasAdminRole = false;
+
+    public Guid UserId = Guid.Empty;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var claims = user.Claims.ToList();
+        HasAdminRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Admin");
+        var userIdClaim = claims.FirstOrDefault(claim => claim.Type == "nameid");
+        if (userIdClaim != null) UserId = Guid.Parse(userIdClaim.Value);
+
+        Chapters = (await ChapterDataService.GetChaptersAsync()).ToList();
+    }
+
+    private void NavigateToChapterOpen(Guid chapterId)
+    {
+        NavigationManager.NavigateTo($"/chapteropen/{chapterId}");
+    }
+
+    private void NavigateToUpdateChapter(Guid chapterId)
+    {
+        NavigationManager.NavigateTo($"/updatechapter/{chapterId}");
+    }
+}

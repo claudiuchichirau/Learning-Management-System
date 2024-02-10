@@ -1,0 +1,597 @@
+﻿@page "/chapteropen/{chapterId}"
+@using LearningManagementSystem.App.Auth
+@using LearningManagementSystem.App.Contracts
+@using LearningManagementSystem.App.Services
+@using LearningManagementSystem.App.SharedDataServices
+@using LearningManagementSystem.App.ViewModels
+@inject NavigationManager NavigationManager
+@inject CustomStateProvider AuthStateProvider
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .title {
+        font-weight: bold;
+        text-align: center;
+        color: #ff7f00;
+        font-size: 2.5em;
+        margin-bottom: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .description {
+        font-size: 0.9em;
+        text-align: center;
+        color: #333;
+        font-size: 1em;
+        margin-right: 5px;
+        margin-bottom: 10px;
+    }
+
+    .btn-primary {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none;
+        border-radius: 5px;
+        display: block;
+        margin: 0 auto;
+        margin-top: 20px;
+    }
+
+        .btn-primary:hover {
+            background-color: #fcba5c;
+            color: black;
+            border: none;
+            outline: none;
+        }
+
+    .video-container {
+        position: relative;
+        overflow: hidden;
+        width: 70%; /* Adjust the width as needed */
+        margin: 0 auto; /* Center the container horizontally */
+        padding-top: 39.375%; /* 9 / 16 * 100 for a 16:9 aspect ratio */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
+
+    .pdf-container {
+        width: 70%;
+        height: 900px;
+        margin: 0 auto;
+        border: 1px solid #ddd;
+        margin-top: 20px;
+        overflow: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .not-found {
+        position: relative;
+        text-align: center;
+        width: 70%;
+        overflow: hidden;
+        margin: 0 auto; /* Center the container horizontally */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Styles for mobile devices */
+    @@media (max-width: 600px) {
+        .video-container {
+            padding-top: 75%; /* Adjust aspect ratio for mobile */
+        }
+
+        .pdf-container {
+            /* Adjust styles as needed for mobile */
+        }
+    }
+
+    /* Styles for tablet devices */
+    @@media (min-width: 601px) and (max-width: 1024px) {
+        .video-container {
+            padding-top: 64%; /* Adjust aspect ratio for tablet */
+        }
+
+        .pdf-container {
+            /* Adjust styles as needed for tablet */
+        }
+    }
+
+    .container {
+        width: 80%;
+        margin: auto;
+    }
+
+    h4, h5 {
+        color: #333;
+    }
+
+    p {
+        color: #666;
+    }
+
+    iframe, embed {
+        width: 100%;
+        height: 400px;
+    }
+
+    /* Stiluri pentru întrebări */
+    .question {
+        margin-top: 20px;
+    }
+
+        .question strong {
+            color: #333;
+        }
+
+        .question ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+            .question ul li {
+                background-color: #f9f9f9;
+                margin-bottom: 10px;
+                padding: 10px;
+                border-radius: 5px;
+            }
+
+                .question ul li strong {
+                    color: green;
+                }
+
+                .question ul li em {
+                    color: red;
+                }
+
+    .quiz-results-title {
+        font-weight: bold;
+        text-align: center;
+        color: #ff7f00;
+        font-size: 2.5em;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .quiz-content {
+        text-align: center;
+    }
+
+    .question-answer {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .question-text {
+        color: #555;
+        font-size: 18px;
+    }
+
+    .correct-answer {
+        color: green;
+        font-size: 16px;
+    }
+
+    .incorrect-answer {
+        color: red;
+        font-size: 16px;
+    }
+
+    .quiz-results-title {
+        font-weight: bold;
+        text-align: center;
+        color: #ff7f00;
+        font-size: 2.5em;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .quiz-content {
+        text-align: center;
+    }
+
+    .question-answer {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .question-text {
+        color: #555;
+        font-size: 18px;
+    }
+
+    .correct-answer {
+        color: green;
+        font-size: 16px;
+    }
+
+    .incorrect-answer {
+        color: red;
+        font-size: 16px;
+    }
+
+    .retry-quiz-btn {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none;
+        border-radius: 5px;
+        display: block;
+        margin: 0 auto;
+        padding: 10px 20px;
+        font-size: 18px;
+    }
+
+
+    /* Stiluri responsabile */
+    @@media (max-width: 600px) {
+        .container {
+            width: 95%;
+        }
+
+        iframe, embed {
+            height: 300px;
+        }
+    }
+
+    .edit-button {
+        background-color: transparent;
+        color: white;
+        width: 30px; /* Adjusted width for a smaller circular button */
+        height: 30px; /* Adjusted height for a smaller circular button */
+        border: none;
+        border-radius: 50%; /* Set border-radius to 50% for a circle */
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center the content horizontally */
+    }
+
+        .edit-button:hover {
+            background-color: transparent;
+        }
+
+    .edit-icon {
+        width: 20px; /* Adjusted icon size */
+        height: 20px;
+    }
+
+    .presentation {
+        display: flex;
+        justify-content: space-between;
+        flex-direction: column;
+    }
+
+    .title-container {
+        flex-grow: 2; /* Grow to take available space */
+    }
+
+    .edit-button-container {
+        margin-left: 10px; /* Add some space between title and button */
+        width: 10%;
+        height: 10%;
+    }
+
+    .table {
+        width: 100%;
+        margin-bottom: 1rem;
+        color: #212529;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.75rem;
+        vertical-align: top;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .table thead th {
+        vertical-align: bottom;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table tbody+tbody {
+        border-top: 2px solid #dee2e6;
+    }
+
+    .text-success {
+        color: #28a745;
+    }
+
+    .text-danger {
+        color: #dc3545;
+    }
+
+    @@media (max-width: 575.98px) {
+        .table-responsive-sm {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            -ms-overflow-style: -ms-autohiding-scrollbar;
+        }
+
+        .table-responsive-sm > .table {
+            margin-bottom: 0;
+        }
+
+        .table-responsive-sm > .table-bordered {
+            border: 0;
+        }
+    }
+</style>
+
+
+@if (chapterDto != null)
+{
+    <div class="presentation">
+        <div class="row">
+            <div class="col-12">
+                <h4 class="title">@chapterDto.Title</h4>
+                @if (HasAdminRole || UserId == chapterDto.Course?.UserId)
+                {
+                    <button class="btn btn-primary edit-button" @onclick="() => NavigateToUpdateChapter()">
+                        <img src="/Images/edit-icon.png" alt="Edit" class="edit-icon" />
+                    </button>
+                }
+            </div>
+            @* <div class="col-md-4 text-right"> *@
+            @* </div> *@
+        </div>
+    </div>
+    <p class="description">Take a moment to carefully watch the video provided below. Pay close attention to the details and key points presented as they will be instrumental in enhancing your understanding of the topic. Once you’ve finished watching the video, proceed to the questions section located at the end of the chapter. These questions are designed to test your comprehension and recall of the material covered in the video. Your responses will help reinforce what you’ve learned and highlight any areas that may require further review. Remember, the goal is not just to watch and answer, but to fully engage with the material and make the most of your learning journey.</p>
+    @if (!string.IsNullOrEmpty(chapterDto.Link))
+    {
+        var videoId = ExtractYouTubeVideoId(chapterDto.Link);
+        var embedLink = $"https://www.youtube.com/embed/{videoId}";
+
+        <div class="video-container">
+            <iframe width="700" height="400" src="@embedLink" frameborder="0" allowfullscreen></iframe>
+        </div>
+    }
+    else
+    {
+        <p class="not-found">Nu există link către videoclip pentru acest capitol.</p>
+    }
+
+    @if (chapterDto.Content != null && chapterDto.Content.Length > 0)
+    {
+        <div class="pdf-container">
+            <embed src="data:application/pdf;base64,@Convert.ToBase64String(chapterDto.Content)" type="application/pdf" style="height:900px" />
+        </div>
+    }
+    else
+    {
+        <p class="not-found">Nu există conținut PDF pentru acest capitol.</p>
+    }
+
+    @if (chapterDto.Questions == null || chapterDto.Questions.Count == 0)
+    {
+        if (HasAdminRole || UserId == chapterDto.Course?.UserId)
+        {
+            <button class="btn btn-primary" @onclick="() => NavigateToCreateQuiz()">Create a Quiz</button>
+        }
+    }
+    else if (chapterDto.Questions != null && chapterDto.Questions.Count > 0)
+        {
+        if (HasAdminRole || UserId == chapterDto.Course?.UserId)
+        {
+            <p class="quiz-results-title">Your Quiz</p>
+
+            <div class="quiz-content table-responsive-sm">
+
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Choice 1</th>
+                            <th>Choice 2</th>
+                            <th>Choice 3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var question in chapterDto.Questions)
+                        {
+                            <tr>
+                                <td>@question.Text</td>
+                                @foreach (var choice in question.Choices)
+                                {
+                                    <td>
+                                        @if (choice.IsCorrect)
+                                        {
+                                            <p class="correct-answer text-success">✔@choice.Content</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="choice-text">@choice.Content</p>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <button class="btn btn-primary retry-quiz-btn" @onclick="() => DeleteQuiz()">Delete Quiz</button>
+            </div>
+        }
+    }
+    @if (chapterDto.Questions != null && chapterDto.Questions.Any() && Enrollment != null)
+    {
+        @if (QuizResults.Count == 0)
+        {
+            <button class="btn btn-primary" @onclick="() => NavigateToSolveQuiz()">Take a quiz</button>
+        }
+        else
+        {
+            <p class="quiz-results-title">Your Quiz Results</p>
+
+            <div class="quiz-content table-responsive-sm">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Correct Choice</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var res in QuizResults)
+                        {
+                            <tr>
+                                <td>@res.Question</td>
+                                <td>@res.RightChoice</td>
+                                <td>
+                                    @if (res.WasCorrect)
+                                    {
+                                        <span class="text-success">&#10004; Correct</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">&#10060; Incorrect</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+}
+else
+{
+    <p>Loading...</p>
+}
+
+@code {
+    [Inject]
+    public IChapterDataService ChapterDataService { get; set; }
+
+    [Inject]
+    public IEnrollmentDataService EnrollmentDataService { get; set; }
+
+    [Inject]
+    public IQuizDataService QuizDataService { get; set; }
+
+    [Parameter]
+    public string ChapterId { get; set; }
+
+    public ChapterDto chapterDto { get; set; }
+
+    public bool HasAdminRole = false;
+
+    public Guid UserId = Guid.Empty;
+
+    public List<EnrolledCourseDto> EnrolledCourses { get; set; } = [];
+
+    public EnrolledCourseDto Enrollment { get; set; }
+
+    public List<QuizResultDto> QuizResults { get; set; } = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+        var claims = user.Claims.ToList();
+
+        var userIdClaim = claims.FirstOrDefault(claim => claim.Type == "nameid");
+
+        HasAdminRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Admin");
+
+        if (userIdClaim != null) UserId = Guid.Parse(userIdClaim.Value);
+
+        Guid Id = Guid.Parse(ChapterId);
+
+        var result = await ChapterDataService.GetChapterDetailsAsync(Id);
+
+        var c = await ChapterDataService.GetChapterByIdAsync(Id);
+
+        if (c.IsSuccess)
+        {
+            var chapter = c.Data;
+
+            EnrolledCourses = (await EnrollmentDataService.GetEnrolledCoursesAsync(UserId)).ToList();
+
+            Enrollment = EnrolledCourses.FirstOrDefault(ec => ec.CourseId == chapter.CourseId);
+        }
+
+        if (result.IsSuccess)
+        {
+            chapterDto = result.Data;
+
+            if (Enrollment != null) QuizResults = await QuizDataService.GetQuizResultsAsync(new GetQuizResultsViewModel { EnrollmentId = Enrollment.EnrollmentId, ChapterId = chapterDto.ChapterId });
+        }
+        else
+        {
+            Console.WriteLine("Capitolul nu a fost găsit.");
+        }
+    }
+
+    private string ExtractYouTubeVideoId(string youtubeUrl)
+    {
+        var uri = new Uri(youtubeUrl);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        return queryParams["v"];
+    }
+
+    private async void DeleteQuiz()
+    {
+        var res = await QuizDataService.DeleteQuizAsync(new DeleteQuizViewModel { ChapterId = Guid.Parse(ChapterId) });
+
+        if (res.IsSuccess)
+        {
+            var result = await ChapterDataService.GetChapterDetailsAsync(Guid.Parse(ChapterId));
+
+            if (result.IsSuccess)
+            {
+                chapterDto = result.Data;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void NavigateToCreateQuiz()
+    {
+        NavigationManager.NavigateTo($"/createquiz/{chapterDto.ChapterId}");
+    }
+
+    private void NavigateToSolveQuiz()
+    {
+        NavigationManager.NavigateTo($"/solve-quiz/{chapterDto.ChapterId}");
+    }
+
+    private void NavigateToUpdateChapter()
+    {
+        NavigationManager.NavigateTo($"/updatechapter/{chapterDto.ChapterId}");
+    }
+}

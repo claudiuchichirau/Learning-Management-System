@@ -1,0 +1,318 @@
+﻿@page "/coursechapters/{courseId}"
+@using LearningManagementSystem.App.Auth
+@using LearningManagementSystem.App.Contracts
+@using LearningManagementSystem.App.ViewModels
+@using System.Security.Claims
+@inject CustomStateProvider AuthStateProvider
+
+<style>
+    h3 {
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .first-section {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        margin-top: 30px;
+    }
+
+        .first-section .title {
+            font-weight: bold;
+            text-align: left;
+            color: #ff7f00;
+            font-size: 2.5em;
+            margin-left: 5px;
+        }
+
+        .first-section .edit-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .first-section .description {
+            font-size: 0.9em;
+            text-align: right;
+            color: #333;
+            max-width: 50%;
+            font-size: 1em;
+            margin-right: 5px;
+        }
+
+    @@media (max-width: 900px) {
+        .first-section {
+            flex-direction: column;
+        }
+
+            .first-section .title,
+            .first-section .description {
+                text-align: center;
+                max-width: 100%;
+            }
+    }
+
+    .course-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+    }
+
+    .course-card {
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 20px;
+        width: calc(100% / 3 - 40px);
+        box-sizing: border-box;
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .course-header {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .course-title {
+        font-size: 20px;
+        margin: 0 0 10px 0;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .course-professor,
+    .course-category,
+    .course-description {
+        margin: 0;
+        text-align: center;
+    }
+
+    .course-professor {
+        text-align: right;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .add-chapter {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none;
+        text-align: center;
+        border-radius: 5px;
+        margin-top: 10px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+        .add-chapter:hover {
+            background-color: #fcba5c;
+            color: black;
+            border: none;
+            outline: none;
+        }
+
+    .enroll-button {
+        background-color: #ff9404;
+        color: white;
+        border: none;
+        outline: none;
+        text-align: right;
+        border-radius: 5px;
+        margin-top: 10px;
+        outline: none;
+    }
+
+        .enroll-button:hover {
+            background-color: #fcba5c;
+            color: black;
+            border: none;
+            outline: none;
+        }
+
+    .title-container {
+        display: flex;
+        align-items: center;
+    }
+
+    .edit-button {
+        margin-left: 5px;
+        background-color: #ff9404;
+        border: 2px solid #ff9404;
+    }
+
+    .edit-button:hover {
+            background-color: #fcba5c;
+     }
+    
+
+    @@media (max-width: 1024px) {
+        /* 3 carduri pe rând pe tabletă */
+        .course-card {
+            width: calc(100% / 2 - 40px);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        /* 2 carduri pe rând pe mobile */
+        .course-card {
+            width: calc(100% / 1 - 40px);
+        }
+    }
+
+    
+
+</style>
+
+@if (Course != null)
+{
+    <div class="first-section">
+        <div class="col-12">
+            <div class="title-container">
+                <h4 class="title">@Course.Title</h4>
+                @if (HasAdminRole || UserId == Course?.UserId)
+                {
+                    <button class="btn btn-primary edit-button" @onclick="() => NavigateToUpdateCourse()">
+                        <img src="/Images/edit-icon.png" alt="Edit" class="edit-icon" />
+                    </button>
+                }
+            </div>
+            <p class="description">@Course.Description</p>
+
+
+        </div>
+    </div>
+
+    @if (HasAdminRole || UserId == @Course.UserId)
+    {
+        <button class="btn btn-success add-chapter" @onclick="() => NavigateToAddChapter()">Add Chapter</button>
+    }
+
+    @if (Course.Chapters != null && Course.Chapters.Any())
+    {
+        <div class="course-container">
+            @foreach (var chapter in Course.Chapters)
+            {
+                <div class="course-card">
+                    <div class="course-header">
+                        <h2 class="course-title">@chapter.Title</h2>
+                        <p class="course-description">@chapter.Link</p>
+                    </div>
+                    <div class="button-container">
+                        @if (HasAdminRole || UserId == Course.UserId)
+                        {
+                            <button class="btn btn-success enroll-button" @onclick="() => NavigateToUpdateChapter(chapter.ChapterId)">Update</button>
+                            <button class="btn btn-primary enroll-button" @onclick="() => NavigateToChapterOpen(chapter.ChapterId)">Open Chapter</button>
+                        }
+                        //verificare daca userul este inscris la curs
+                        else if (EnrolledCourses.Any(ec => ec.CourseId == Course.CourseId))
+                        {
+                            <button class="btn btn-primary enroll-button" @onclick="() => NavigateToChapterOpen(chapter.ChapterId)">Open Chapter</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p>No chapters available for this course.</p>
+    }
+}
+else
+{
+    <p>Loading...</p>
+}
+
+
+@code {
+    [Inject]
+    public ICourseDataService CourseDataService { get; set; }
+
+    [Inject]
+    public IEnrollmentDataService EnrollmentDataService { get; set; }
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+
+    [Parameter]
+    public string CourseId { get; set; }
+
+    public CourseDto Course { get; set; }
+
+    public List<EnrolledCourseDto> EnrolledCourses { get; set; }
+
+    public Guid UserId = Guid.Empty;
+
+    public bool HasAdminRole = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var courseId = Guid.Parse(CourseId);
+        if (courseId == Guid.Empty)
+        {
+            ShowNotification("Invalid CourseId", NotificationType.Error);
+            return;
+        }
+
+        var response = await CourseDataService.GetChaptersByCourseAsync(courseId);
+        Course = response.Data;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var claims = user.Claims.ToList();
+        var userIdClaim = claims.FirstOrDefault(claim => claim.Type == "nameid");
+
+        if (userIdClaim != null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        EnrolledCourses = (await EnrollmentDataService.GetEnrolledCoursesAsync(UserId)).ToList();
+
+        HasAdminRole = claims.Any(claim => claim.Type == "role" && claim.Value == "Admin");
+        if (userIdClaim != null) UserId = Guid.Parse(userIdClaim.Value);
+    }
+
+    private void ShowNotification(string message, NotificationType type)
+    {
+        // Puteți implementa aici logica de afișare a notificării
+        // De exemplu, prin setarea unei variabile de stare și afișarea în interfață
+        // sau prin utilizarea unui serviciu de notificare existent în aplicația dvs.
+        Console.WriteLine($"Notification: {type} - {message}");
+    }
+
+    public enum NotificationType
+    {
+        Success,
+        Error,
+        Info,
+        Warning
+    }
+
+    private void NavigateToUpdateChapter(Guid chapterId)
+    {
+        NavigationManager.NavigateTo($"/updatechapter/{chapterId}");
+    }
+
+    private void NavigateToUpdateCourse()
+    {
+        NavigationManager.NavigateTo($"/updatecourse/{Course.CourseId}");
+    }
+
+    private void NavigateToAddChapter()
+    {
+        NavigationManager.NavigateTo($"/addchapter");
+    }
+
+    private void NavigateToChapterOpen(Guid chapterId)
+    {
+        NavigationManager.NavigateTo($"/chapteropen/{chapterId}");
+    }
+}
