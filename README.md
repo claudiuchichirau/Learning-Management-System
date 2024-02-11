@@ -1,5 +1,5 @@
 # Learning-Management-System (LMS) Project
-The Learning Management System (LMS) is a web-based platform that allows users to access educational content, enroll in courses, watch video lectures, take quizzes, and track their progress. In this project, we’ll build an LMS using Python, PostgreSQL databases, and ML.NET for personalized course recommendations.
+The Learning Management System (LMS) is a web-based platform that allows users to access educational content, enroll in courses, watch video lectures, take quizzes, and track their progress. In this project, we’ll build an LMS using C# and Razor in ASP.NET Core and PostgreSQL databases.
 
 # Video Demo: https://youtu.be/nzUfBjaDO_g
 
