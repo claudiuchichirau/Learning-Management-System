@@ -38,5 +38,4 @@ After studying the chapter, the user takes the quiz related to that chapter.
 The system evaluates their answers and provides feedback.
 5. **Progress Tracking**:
 In the user’s account dashboard, they can see their progress percentage for the enrolled course.
-Course Recommendations:
-Based on their past activities, ML.NET suggests other courses the user might be interested in.
+
